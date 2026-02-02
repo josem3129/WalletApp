@@ -1,0 +1,71 @@
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.mobile-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.balance-card {
+    background: #1e1e1e;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #bb86fc;
+}
+
+.credit { border-left-color: #cf6679; }
+
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 5px;
+    border: none;
+    background: #2c2c2c;
+    color: white;
+}
+
+button {
+    background-color: #03dac6;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.history-container {
+    background: #1e1e1e;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    border-bottom: 1px solid #333;
+    font-size: 0.9rem;
+}
+
+.history-item span.amount { font-weight: bold; }
+.income-text { color: #03dac6; }
+.expense-text { color: #cf6679; }
+.payment-text { color: #ffb74d; }
+
+.history-item button:hover {
+    color: #ff1744 !important;
+    transform: scale(1.2);
+}
+
+.history-item div {
+    flex-grow: 1;
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker</title>
+    <link rel="stylesheet" href="./styles/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <main class="mobile-container">
+        <header>
+            <h1>My Finances</h1>
+        </header>
+
+        <section id="dashboard">
+            <div class="balance-card">Checking 1: <span id="chk1-bal">$0</span></div>
+            <div class="balance-card">Checking 2: <span id="chk2-bal">$0</span></div>
+            <div class="balance-card">Savings: <span id="savings-bal">$0</span></div>
+            <div class="balance-card credit">Credit Card: <span id="cc-bal">$0</span></div>
+        </section>
+
+        <canvas id="expenseChart"></canvas>
+
+        <section id="inputs">
+            <h3>Add Expense</h3>
+            <input type="date" id="exp-date">
+            <input type="number" id="exp-amount" placeholder="Amount">
+            <select id="exp-category">
+                <option value="Food">Food</option>
+                <option value="Bills">Bills</option>
+                <option value="LEGO/Hobbies">Hobbies</option>
+                <option value="Car">Car</option>
+            </select>
+            <select id="exp-account">
+                <option value="chk1">Checking 1</option>
+                <option value="chk2">Checking 2</option>
+                <option value="sav">Savings</option>
+                <option value="cc">Credit Card</option>
+            </select>
+            <button onclick="addExpense()">Add Expense</button>
+        </section>
+
+        <section id="income-inputs" >
+            <h3>Add Income</h3>
+            <input type="date" id="inc-date">
+            <input type="number" id="inc-amount" placeholder="Amount">
+            <input type="text" id="inc-source" placeholder="Source (e.g., Salary, Refund)">
+
+            <select id="inc-account">
+                <option value="chk1">Checking 1</option>
+                <option value="chk2">Checking 2</option>
+                <option value="sav">Savings</option>
+            </select>
+
+            <button onclick="addIncome()">Add Income</button>
+        </section>
+
+        <section id="cc-payment-section">
+    <h3>Pay Credit Card</h3>
+    <input type="date" id="pay-date">
+    <input type="number" id="pay-amount" placeholder="Payment Amount">
+    <select id="pay-from-account">
+        <option value="chk1">From Checking 1</option>
+        <option value="chk2">From Checking 2</option>
+    </select>
+    <button onclick="payCreditCard()" style="background-color: #ffb74d; color: black;">Record Payment</button>
+</section>
+
+<section id="history-section">
+    <h3>Recent History</h3>
+    <div id="transaction-list" class="history-container">
+        </div>
+</section>
+    </main>
+
+    <script type="module" src="./Script/app.js"></script>
+</body>
+
+</html>
