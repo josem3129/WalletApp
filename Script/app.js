@@ -77,38 +77,6 @@ window.addIncome = async () => {
 
 // 3. Live Updates & Chart
 let myChart;
-onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
-  let balances = { chk1: 0, chk2: 0, sav: 0, cc: 0 };
-  let chartData = {};
-
-  snapshot.forEach((doc) => {
-    const data = doc.data();
-    // Update Balances
-    if (data.type === "income") {
-      balances[data.account] += data.amount;
-    } else {
-      balances[data.account] -= data.amount;
-      // Prep Chart Data (Current Month Only)
-      const transDate = new Date(data.date);
-      if (transDate.getMonth() === new Date().getMonth()) {
-        chartData[data.category] =
-          (chartData[data.category] || 0) + data.amount;
-      }
-    }
-  });
-
-  // Update UI
-  document.getElementById("chk1-bal").innerText =
-    `$${balances.chk1.toFixed(2)}`;
-  document.getElementById("chk2-bal").innerText =
-    `$${balances.chk2.toFixed(2)}`;
-  document.getElementById("savings-bal").innerText =
-    `$${balances.sav.toFixed(2)}`;
-  document.getElementById("cc-bal").innerText =
-    `$${Math.abs(balances.cc).toFixed(2)}`;
-
-  updateChart(chartData);
-});
 
 function updateChart(chartData) {
   const ctx = document.getElementById("expenseChart").getContext("2d");
@@ -155,7 +123,8 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
   let balances = { chk1: 0, chk2: 0, sav: 0, cc: 0 };
   let chartData = {};
   const listElement = document.getElementById("transaction-list");
-  listElement.innerHTML = ""; // Clear list before re-rendering
+  
+  if (listElement) listElement.innerHTML = ""; 
 
   snapshot.forEach((doc) => {
     const data = doc.data();
@@ -165,29 +134,22 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
       balances[data.account] += data.amount;
     } else if (data.type === "expense") {
       balances[data.account] -= data.amount;
-      // Add to chart if current month
       const transDate = new Date(data.date);
+      // Chart data for current month
       if (transDate.getMonth() === new Date().getMonth()) {
-        chartData[data.category] =
-          (chartData[data.category] || 0) + data.amount;
+        chartData[data.category] = (chartData[data.category] || 0) + data.amount;
       }
     } else if (data.type === "payment") {
-      balances[data.account] -= data.amount; // Leaves checking
-      balances[data.toAccount] += data.amount; // Hits CC (reduces debt)
+      balances[data.account] -= data.amount;
+      balances[data.toAccount] += data.amount;
     }
 
     // --- Render History Item ---
-    // Find this section inside your snapshot.forEach loop:
     const item = document.createElement("div");
     item.className = "history-item";
-    const typeClass =
-      data.type === "income"
-        ? "income-text"
-        : data.type === "payment"
-          ? "payment-text"
-          : "expense-text";
+    const typeClass = data.type === "income" ? "income-text" : data.type === "payment" ? "payment-text" : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
-    // button for deleting transaction
+
     item.innerHTML = `
     <div style="display: flex; align-items: center; gap: 10px;">
         <button onclick="deleteTransaction('${doc.id}')" style="background:none; border:none; color:#cf6679; padding:0; cursor:pointer; font-size: 1.2rem;">×</button>
@@ -196,21 +158,16 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
             <small style="color:gray">${data.date} • ${data.account.toUpperCase()}</small>
         </div>
     </div>
-    <span class="amount ${typeClass}">${symbol}$${data.amount.toFixed(2)}</span>
-`;
-    listElement.appendChild(item);
-    listElement.appendChild(item);
+    <span class="amount ${typeClass}">${symbol}$${data.amount.toFixed(2)}</span>`;
+    
+    if (listElement) listElement.appendChild(item);
   });
 
-  // Update Dashboard UI (same as before)
-  document.getElementById("chk1-bal").innerText =
-    `$${balances.chk1.toFixed(2)}`;
-  document.getElementById("chk2-bal").innerText =
-    `$${balances.chk2.toFixed(2)}`;
-  document.getElementById("savings-bal").innerText =
-    `$${balances.sav.toFixed(2)}`;
-  document.getElementById("cc-bal").innerText =
-    `$${Math.abs(balances.cc).toFixed(2)}`;
+  // Update UI
+  document.getElementById("chk1-bal").innerText = `$${balances.chk1.toFixed(2)}`;
+  document.getElementById("chk2-bal").innerText = `$${balances.chk2.toFixed(2)}`;
+  document.getElementById("savings-bal").innerText = `$${balances.sav.toFixed(2)}`;
+  document.getElementById("cc-bal").innerText = `$${Math.abs(balances.cc).toFixed(2)}`;
 
   updateChart(chartData);
 });
