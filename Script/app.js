@@ -187,7 +187,7 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
           ? "payment-text"
           : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
-
+    // button for deleting transaction
     item.innerHTML = `
     <div style="display: flex; align-items: center; gap: 10px;">
         <button onclick="deleteTransaction('${doc.id}')" style="background:none; border:none; color:#cf6679; padding:0; cursor:pointer; font-size: 1.2rem;">×</button>
