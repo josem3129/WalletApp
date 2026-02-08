@@ -129,31 +129,51 @@ showToast("Payment Recorded!");
 
 // 2. Update the onSnapshot listener to also render the list
 onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
-  let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0 };
+  // 1. Initialize all accounts, including your new Pocket Change (pc)
+  let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0, pc: 0 };
   let chartData = {};
   const listElement = document.getElementById("transaction-list");
 
   if (listElement) listElement.innerHTML = "";
 
-// Inside your onSnapshot loop in app.js
-snapshot.forEach((doc) => {
+  snapshot.forEach((doc) => {
     const data = doc.data();
-    
-    // Determine the label for the transaction
+
+    // 2. RUN THE MATH FOR BALANCES
+    if (data.type === "income") {
+      balances[data.account] += data.amount;
+    } else if (data.type === "expense") {
+      balances[data.account] -= data.amount;
+
+      // Pocket Change Round-Up Logic
+      const roundUp = data.amount % 1 === 0 ? 0 : (1 - (data.amount % 1));
+      if (roundUp > 0) {
+        balances[data.account] -= roundUp;
+        balances["chk3"] += roundUp; 
+      }
+
+      // Update Chart data
+      const transDate = new Date(data.date);
+      if (transDate.getMonth() === new Date().getMonth()) {
+        chartData[data.category] = (chartData[data.category] || 0) + data.amount;
+      }
+    } else if (data.type === "payment") {
+      balances[data.account] -= data.amount;
+      balances[data.toAccount] += data.amount;
+    }
+
+    // 3. RENDER HISTORY (Your existing code)
     let displayLabel = data.category || data.source;
     if (data.type === "payment") {
         displayLabel = data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
     }
 
-    // Determine the account display text
     const accountLabel = data.type === "payment" 
         ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}` 
         : data.account.toUpperCase();
 
-    // Render History Item
     const item = document.createElement("div");
     item.className = "history-item";
-    
     const typeClass = data.type === "income" ? "income-text" : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
 
@@ -161,9 +181,7 @@ snapshot.forEach((doc) => {
         <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
             <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
             <div style="min-width: 0; flex-grow: 1;">
-                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${displayLabel}
-                </div>
+                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayLabel}</div>
                 <small style="color:gray; display: block;">${data.date} • ${accountLabel}</small>
             </div>
         </div>
@@ -172,22 +190,17 @@ snapshot.forEach((doc) => {
         </span>`;
 
     if (listElement) listElement.appendChild(item);
-});
+  });
 
-  // Update UI
-  document.getElementById("chk1-bal").innerText =
-    `$${balances.chk1.toFixed(2)}`;
-  document.getElementById("chk2-bal").innerText =
-    `$${balances.chk2.toFixed(2)}`;
-      document.getElementById("chk3-bal").innerText =
-    `$${balances.chk3.toFixed(2)}`;
-  document.getElementById("savings-bal").innerText =
-    `$${balances.sav.toFixed(2)}`;
-  document.getElementById("cc-bal").innerText =
-    `$${Math.abs(balances.cc).toFixed(2)}`;
+  // 4. UPDATE UI - Match these IDs to your index.html exactly
+  document.getElementById("chk1-bal").innerText = `$${balances.chk1.toFixed(2)}`;
+  document.getElementById("chk2-bal").innerText = `$${balances.chk2.toFixed(2)}`;
+  document.getElementById("savings-bal").innerText = `$${balances.sav.toFixed(2)}`;
+  document.getElementById("cc-bal").innerText = `$${Math.abs(balances.cc).toFixed(2)}`;
 
-    const pcDisplay = document.getElementById("pc-bal");
-  if (pcDisplay) pcDisplay.innerText = `$${balances.pc.toFixed(2)}`;
+  // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
+  const pcDisplay = document.getElementById("chk3-bal");
+  if (pcDisplay) pcDisplay.innerText = `$${balances.chk3.toFixed(2)}`;
 
   updateChart(chartData);
 });
