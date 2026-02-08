@@ -46,7 +46,13 @@ window.addExpense = async () => {
     date,
     timestamp: new Date(),
   });
-  alert("Expense Added!");
+  await addDoc(transCol, { type: "balanceUpdate", account, amount: -parseFloat(amount), timestamp: new Date() });
+showToast("Expense Recorded!"); 
+  amount.value = "";
+  category.value = "Food";
+  expenseName.value = "";
+  date.value = "";
+  account.value = "Checking 100"; // Reset to default account
 };
 
 // 2. Add Income
@@ -66,7 +72,12 @@ window.addIncome = async () => {
     date,
     timestamp: new Date(),
   });
-  alert("Income Added!");
+  await addDoc(transCol, { type: "income added successfully", amount });
+showToast("Expense Recorded!"); 
+  amount.value = "";
+  source.value = "";
+  date.value = "";
+  account.value = "Checking 100"; // Reset to default account
 };
 
 // 3. Live Updates & Chart
@@ -109,7 +120,11 @@ window.payCreditCard = async () => {
     date: date,
     timestamp: new Date(),
   });
-  alert("Payment Recorded!");
+  await addDoc(transCol, { type: "payment successful", amount});
+showToast("Expense Recorded!");
+  amount.value = "";
+  date.value = "";
+  fromAccount.value = "Checking 100"; // Reset to default account
 };
 
 // 2. Update the onSnapshot listener to also render the list
@@ -152,7 +167,7 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
 
     // Inside your onSnapshot loop in app.js
 item.innerHTML = `
-    <div style="display: flex; align-items: center; width: 85%; gap: 10px; min-width: 0;">
+    <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
         <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
         <div style="min-width: 0; flex-grow: 1;">
             <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -189,4 +204,11 @@ window.deleteTransaction = async (id) => {
       console.error("Error removing document: ", error);
     }
   }
+};
+
+window.showToast = (message) => {
+    const toast = document.getElementById("toast");
+    toast.innerText = message;
+    toast.className = "toast show";
+    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
 };
