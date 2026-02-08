@@ -1,36 +1,28 @@
-// Firestore functions come from the /firebase-firestore.js file
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  deleteDoc, // Add this
-  doc, // Add this
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import Chart from "https://cdn.jsdelivr.net/npm/chart.js/auto/auto.js";
+// Use standard NPM imports instead of URLs
+import { initializeApp } from "firebase/app";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  deleteDoc, 
+  doc 
+} from "firebase/firestore";
+import Chart from 'chart.js/auto';
 
-// If you want analytics, it stays separate, but usually isn't needed for a private app
-// import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Your existing config using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyABEJLalnR_6dFlfGA9IXE4ObOupQ8eZ2o",
-  authDomain: "wall-app-dcfb0.firebaseapp.com",
-  projectId: "wall-app-dcfb0",
-  storageBucket: "wall-app-dcfb0.firebasestorage.app",
-  messagingSenderId: "708313130178",
-  appId: "1:708313130178:web:1f8cc06ab259af7da7475b",
-  measurementId: "G-X9MQKHDKD9",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const transCol = collection(db, "transactions");
@@ -39,6 +31,7 @@ const transCol = collection(db, "transactions");
 window.addExpense = async () => {
   const amount = document.getElementById("exp-amount").value;
   const category = document.getElementById("exp-category").value;
+  const expenseName = document.getElementById("expense-name").value;
   const account = document.getElementById("exp-account").value;
   const date = document.getElementById("exp-date").value;
 
@@ -48,6 +41,7 @@ window.addExpense = async () => {
     type: "expense",
     amount: parseFloat(amount),
     category,
+    expenseName,
     account,
     date,
     timestamp: new Date(),

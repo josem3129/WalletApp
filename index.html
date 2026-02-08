@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Tracker</title>
     <link rel="stylesheet" href="./styles/style.css">
-    <script type="module" src="./Script/app.js"></script>
 </head>
 
 <body>
@@ -29,11 +28,15 @@
             <input type="date" id="exp-date">
             <input type="number" id="exp-amount" placeholder="Amount">
             <select id="exp-category">
-                <option value="Food">Food</option>
+                <option value="Groceries">Groceries</option>
                 <option value="Bills">Bills</option>
                 <option value="LEGO/Hobbies">Hobbies</option>
                 <option value="Car">Car</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Eating">Eating Out</option>
+                <option value="Shopping">Shopping</option>
             </select>
+            <input type="text" id="expense-name" placeholder="Name">
             <select id="exp-account">
                 <option value="chk1">Checking 1</option>
                 <option value="chk2">Checking 2</option>
@@ -42,7 +45,6 @@
             </select>
             <button onclick="addExpense()">Add Expense</button>
         </section>
-
         <section id="income-inputs" >
             <h3>Add Income</h3>
             <input type="date" id="inc-date">
@@ -76,7 +78,7 @@
 </section>
     </main>
 
-    <script type="module" src="./Script/app.js"></script>
+    <script type="module" src="./src/app.js"></script>
 </body>
 
 </html>
