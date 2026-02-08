@@ -35,9 +35,21 @@ input, select, button {
     
 }
 
-button {
+.incomeBtn {
     background-color: #03dac6;
     color: #000;
+    font-weight: bold;
+    cursor: pointer;
+}
+.expenseBtn {
+    background-color: #cf6679;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+}
+.transferBtn {
+    background-color: #4033f5;
+    color: #ffffff;
     font-weight: bold;
     cursor: pointer;
 }
@@ -58,10 +70,24 @@ button {
     font-size: 0.9rem;
 }
 
-.history-item span.amount { font-weight: bold; }
-.income-text { color: #03dac6; }
-.expense-text { color: #cf6679; }
-.payment-text { color: #ffb74d; }
+.history-item span.amount { 
+    font-weight: bold; 
+}
+
+/* Green for Income */
+.income-text { 
+    color: #03dac6; 
+}
+
+/* Red for Expenses */
+.expense-text { 
+    color: #cf6679; 
+}
+
+/* Orange for Transfers and CC Payments */
+.payment-text { 
+    color: #ffb74d; 
+}
 
 .history-item button:hover {
     color: #ff1744 !important;

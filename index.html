@@ -42,13 +42,13 @@
             <select id="exp-account">
                 <option value="chk1">Checking 100</option>
                 <option value="chk2">Checking 101</option>
-                <option value="chk2">Pocket Change</option>
+                <option value="chk3">Pocket Change</option>
                 <option value="sav">Savings</option>
                 <option value="cc">Credit Card</option>
             </select>
-            <button onclick="addExpense()">Add Expense</button>
+            <button class="expenseBtn" onclick="addExpense()">Add Expense</button>
         </section>
-        <section id="income-inputs" >
+        <section id="income-inputs">
             <h3>Add Income</h3>
             <input type="date" id="inc-date">
             <input type="number" id="inc-amount" placeholder="Amount">
@@ -57,29 +57,52 @@
             <select id="inc-account">
                 <option value="chk1">Checking 100</option>
                 <option value="chk2">Checking 101</option>
-                <option value="chk2">Pocket Change</option>
+                <option value="chk3">Pocket Change</option>
                 <option value="sav">Savings</option>
             </select>
 
-            <button onclick="addIncome()">Add Income</button>
+            <button class="incomeBtn" onclick="addIncome()">Add Income</button>
         </section>
 
         <section id="cc-payment-section">
-    <h3>Pay Credit Card</h3>
-    <input type="date" id="pay-date">
-    <input type="number" id="pay-amount" placeholder="Payment Amount">
-    <select id="pay-from-account">
-        <option value="chk1">From Checking 100</option>
-        <option value="chk2">From Checking 101</option>
-    </select>
-    <button onclick="payCreditCard()" style="background-color: #ffb74d; color: black;">Record Payment</button>
-</section>
+            <h3>Pay Credit Card</h3>
+            <input type="date" id="pay-date">
+            <input type="number" id="pay-amount" placeholder="Payment Amount">
+            <select id="pay-from-account">
+                <option value="chk1">From Checking 100</option>
+                <option value="chk2">From Checking 101</option>
+            </select>
+            <button onclick="payCreditCard()" style="background-color: #ffb74d; color: black;">Record Payment</button>
+        </section>
+        <section class="card">
+            <h2>Transfer Funds</h2>
+            <input type="date" id="trans-date">
+            <input type="number" id="trans-amount" placeholder="Amount">
 
-<section id="history-section">
-    <h3>Recent History</h3>
-    <div id="transaction-list" class="history-container">
-        </div>
-</section>
+            <select id="trans-from-account">
+                <option value="chk1">From Checking 100</option>
+                <option value="chk2">From Checking 101</option>
+                <option value="chk3">From Pocket Change</option>
+                <option value="sav">From Savings</option>
+            </select>
+
+            <select id="trans-to-account">
+                <option value="chk1">To Checking 100</option>
+                <option value="chk2">To Checking 101</option>
+                <option value="chk3">To Pocket Change</option>
+                <option value="sav">To Savings</option>
+                <option value="pc">To Pocket Change</option>
+            </select>
+
+            <button class="transferBtn" onclick="addTransfer()">Transfer</button>
+        </section>
+
+        <section id="history-section">
+            <h3>Recent History</h3>
+            <div id="transaction-list" class="history-container">
+            </div>
+        </section>
+
     </main>
 
     <script type="module" src="./src/app.js"></script>

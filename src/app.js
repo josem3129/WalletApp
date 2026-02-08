@@ -48,11 +48,11 @@ window.addExpense = async () => {
   });
   await addDoc(transCol, { type: "balanceUpdate", account, amount: -parseFloat(amount), timestamp: new Date() });
 showToast("Expense Recorded!"); 
-  amount.value = "";
-  category.value = "Food";
-  expenseName.value = "";
-  date.value = "";
-  account.value = "Checking 100"; // Reset to default account
+  document.getElementById("exp-amount").value = "";
+  document.getElementById("exp-category").value = "Food";
+  document.getElementById("expense-name").value = "";
+  document.getElementById("exp-date").value = "";
+  document.getElementById("exp-account").value = "chk1";
 };
 
 // 2. Add Income
@@ -73,11 +73,11 @@ window.addIncome = async () => {
     timestamp: new Date(),
   });
   await addDoc(transCol, { type: "income added successfully", amount });
-showToast("Expense Recorded!"); 
-  amount.value = "";
-  source.value = "";
-  date.value = "";
-  account.value = "Checking 100"; // Reset to default account
+showToast("Income Recorded!"); 
+  document.getElementById("inc-amount").value = "";
+document.getElementById("inc-source").value = "";
+document.getElementById("inc-date").value = "";
+document.getElementById("inc-account").value = "chk1";
 };
 
 // 3. Live Updates & Chart
@@ -121,67 +121,58 @@ window.payCreditCard = async () => {
     timestamp: new Date(),
   });
   await addDoc(transCol, { type: "payment successful", amount});
-showToast("Expense Recorded!");
-  amount.value = "";
-  date.value = "";
-  fromAccount.value = "Checking 100"; // Reset to default account
+showToast("Payment Recorded!");
+  document.getElementById("pay-amount").value = "";
+  document.getElementById("pay-date").value = "";
+  document.getElementById("pay-from-account").value = "chk1";
 };
 
 // 2. Update the onSnapshot listener to also render the list
 onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
-  let balances = { chk1: 0, chk2: 0, sav: 0, cc: 0 };
+  let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0 };
   let chartData = {};
   const listElement = document.getElementById("transaction-list");
 
   if (listElement) listElement.innerHTML = "";
 
-  snapshot.forEach((doc) => {
+// Inside your onSnapshot loop in app.js
+snapshot.forEach((doc) => {
     const data = doc.data();
-
-    // --- Calculate Balances ---
-    if (data.type === "income") {
-      balances[data.account] += data.amount;
-    } else if (data.type === "expense") {
-      balances[data.account] -= data.amount;
-      const transDate = new Date(data.date);
-      // Chart data for current month
-      if (transDate.getMonth() === new Date().getMonth()) {
-        chartData[data.category] =
-          (chartData[data.category] || 0) + data.amount;
-      }
-    } else if (data.type === "payment") {
-      balances[data.account] -= data.amount;
-      balances[data.toAccount] += data.amount;
+    
+    // Determine the label for the transaction
+    let displayLabel = data.category || data.source;
+    if (data.type === "payment") {
+        displayLabel = data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
     }
 
-    // --- Render History Item ---
+    // Determine the account display text
+    const accountLabel = data.type === "payment" 
+        ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}` 
+        : data.account.toUpperCase();
+
+    // Render History Item
     const item = document.createElement("div");
     item.className = "history-item";
-    const typeClass =
-      data.type === "income"
-        ? "income-text"
-        : data.type === "payment"
-          ? "payment-text"
-          : "expense-text";
+    
+    const typeClass = data.type === "income" ? "income-text" : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
 
-    // Inside your onSnapshot loop in app.js
-item.innerHTML = `
-    <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
-        <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
-        <div style="min-width: 0; flex-grow: 1;">
-            <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${data.category || data.source || "CC Payment"}
+    item.innerHTML = `
+        <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
+            <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
+            <div style="min-width: 0; flex-grow: 1;">
+                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${displayLabel}
+                </div>
+                <small style="color:gray; display: block;">${data.date} • ${accountLabel}</small>
             </div>
-            <small style="color:gray; display: block;">${data.date} • ${data.account.toUpperCase()}</small>
         </div>
-    </div>
-    <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
-        ${symbol}$${data.amount.toFixed(2)}
-    </span>`;
+        <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
+            ${symbol}$${data.amount.toFixed(2)}
+        </span>`;
 
     if (listElement) listElement.appendChild(item);
-  });
+});
 
   // Update UI
   document.getElementById("chk1-bal").innerText =
@@ -194,6 +185,9 @@ item.innerHTML = `
     `$${balances.sav.toFixed(2)}`;
   document.getElementById("cc-bal").innerText =
     `$${Math.abs(balances.cc).toFixed(2)}`;
+
+    const pcDisplay = document.getElementById("pc-bal");
+  if (pcDisplay) pcDisplay.innerText = `$${balances.pc.toFixed(2)}`;
 
   updateChart(chartData);
 });
@@ -213,4 +207,32 @@ window.showToast = (message) => {
     toast.innerText = message;
     toast.className = "toast show";
     setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+};
+
+// Add Transfer Logic
+window.addTransfer = async () => {
+  const amount = parseFloat(document.getElementById("trans-amount").value);
+  const date = document.getElementById("trans-date").value;
+  const fromAccount = document.getElementById("trans-from-account").value;
+  const toAccount = document.getElementById("trans-to-account").value;
+
+  if (!amount || !date || fromAccount === toAccount) {
+    return showToast("Check amounts and accounts!");
+  }
+
+  // Creates a 'payment' type transaction that impacts both accounts
+  await addDoc(transCol, {
+    type: "payment",
+    amount: amount,
+    account: fromAccount,
+    toAccount: toAccount,
+    date: date,
+    timestamp: new Date(),
+  });
+
+  showToast("Transfer Successful!");
+  
+  // Clear the inputs
+  document.getElementById("trans-amount").value = "";
+  document.getElementById("trans-date").value = "";
 };
