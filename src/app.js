@@ -188,6 +188,8 @@ item.innerHTML = `
     `$${balances.chk1.toFixed(2)}`;
   document.getElementById("chk2-bal").innerText =
     `$${balances.chk2.toFixed(2)}`;
+      document.getElementById("chk3-bal").innerText =
+    `$${balances.chk3.toFixed(2)}`;
   document.getElementById("savings-bal").innerText =
     `$${balances.sav.toFixed(2)}`;
   document.getElementById("cc-bal").innerText =
