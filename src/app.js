@@ -1,16 +1,16 @@
 // Use standard NPM imports instead of URLs
 import { initializeApp } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  deleteDoc, 
-  doc 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
-import Chart from 'chart.js/auto';
+import Chart from "chart.js/auto";
 
 // Your existing config using environment variables
 const firebaseConfig = {
@@ -19,7 +19,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
@@ -117,8 +117,8 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
   let balances = { chk1: 0, chk2: 0, sav: 0, cc: 0 };
   let chartData = {};
   const listElement = document.getElementById("transaction-list");
-  
-  if (listElement) listElement.innerHTML = ""; 
+
+  if (listElement) listElement.innerHTML = "";
 
   snapshot.forEach((doc) => {
     const data = doc.data();
@@ -131,7 +131,8 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
       const transDate = new Date(data.date);
       // Chart data for current month
       if (transDate.getMonth() === new Date().getMonth()) {
-        chartData[data.category] = (chartData[data.category] || 0) + data.amount;
+        chartData[data.category] =
+          (chartData[data.category] || 0) + data.amount;
       }
     } else if (data.type === "payment") {
       balances[data.account] -= data.amount;
@@ -141,27 +142,41 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
     // --- Render History Item ---
     const item = document.createElement("div");
     item.className = "history-item";
-    const typeClass = data.type === "income" ? "income-text" : data.type === "payment" ? "payment-text" : "expense-text";
+    const typeClass =
+      data.type === "income"
+        ? "income-text"
+        : data.type === "payment"
+          ? "payment-text"
+          : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
 
-    item.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <button onclick="deleteTransaction('${doc.id}')" style="background:none; border:none; color:#cf6679; padding:0; cursor:pointer; font-size: 1.2rem;">×</button>
-        <div>
-            <div style="font-weight:bold">${data.category || data.source || "CC Payment"}</div>
-            <small style="color:gray">${data.date} • ${data.account.toUpperCase()}</small>
+    // Inside your onSnapshot loop in app.js
+item.innerHTML = `
+    <div style="display: flex; align-items: center; width: 85%; gap: 10px; min-width: 0;">
+        <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
+        <div style="min-width: 0; flex-grow: 1;">
+            <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${data.category || data.source || "CC Payment"}
+            </div>
+            <small style="color:gray; display: block;">${data.date} • ${data.account.toUpperCase()}</small>
         </div>
     </div>
-    <span class="amount ${typeClass}">${symbol}$${data.amount.toFixed(2)}</span>`;
-    
+    <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
+        ${symbol}$${data.amount.toFixed(2)}
+    </span>`;
+
     if (listElement) listElement.appendChild(item);
   });
 
   // Update UI
-  document.getElementById("chk1-bal").innerText = `$${balances.chk1.toFixed(2)}`;
-  document.getElementById("chk2-bal").innerText = `$${balances.chk2.toFixed(2)}`;
-  document.getElementById("savings-bal").innerText = `$${balances.sav.toFixed(2)}`;
-  document.getElementById("cc-bal").innerText = `$${Math.abs(balances.cc).toFixed(2)}`;
+  document.getElementById("chk1-bal").innerText =
+    `$${balances.chk1.toFixed(2)}`;
+  document.getElementById("chk2-bal").innerText =
+    `$${balances.chk2.toFixed(2)}`;
+  document.getElementById("savings-bal").innerText =
+    `$${balances.sav.toFixed(2)}`;
+  document.getElementById("cc-bal").innerText =
+    `$${Math.abs(balances.cc).toFixed(2)}`;
 
   updateChart(chartData);
 });

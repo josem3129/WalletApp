@@ -5,6 +5,7 @@ body {
     margin: 0;
     display: flex;
     justify-content: center;
+    
 }
 
 .mobile-container {
@@ -24,13 +25,14 @@ body {
 .credit { border-left-color: #cf6679; }
 
 input, select, button {
-    width: 100%;
+    width: 90%;
     padding: 12px;
     margin: 8px 0;
     border-radius: 5px;
     border: none;
     background: #2c2c2c;
     color: white;
+    
 }
 
 button {
@@ -66,6 +68,41 @@ button {
     transform: scale(1.2);
 }
 
-.history-item div {
-    flex-grow: 1;
+/* Make the delete button smaller and less intrusive */
+.delete-btn {
+    background: none;
+    border: none;
+    color: #cf6679;
+    padding: 0;
+    cursor: pointer;
+    font-size: 0.9rem; /* Smaller font size */
+    width: 20px;       /* Fixed small width */
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.delete-btn:hover {
+    color: #ff1744 !important;
+    transform: scale(1.1);
+}
+
+/* Update your history container */
+#transaction-list {
+    overflow-x: hidden; /* This kills the horizontal scroll bar */
+    width: 100%;
+    padding: 10px;
+}
+
+/* Update the item row */
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box; /* Ensures padding doesn't push width over 100% */
+    padding: 8px 0;
+    border-bottom: 1px solid #333;
 }
