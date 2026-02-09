@@ -35,6 +35,8 @@ window.addExpense = async () => {
   const account = document.getElementById("exp-account").value;
   const date = document.getElementById("exp-date").value;
 
+  console.log("Adding expense:", { amount, category, expenseName, account, date });
+
   if (!amount || !date) return alert("Fill everything!");
 
   await addDoc(transCol, {
@@ -46,8 +48,7 @@ window.addExpense = async () => {
     date,
     timestamp: new Date(),
   });
-  await addDoc(transCol, { type: "balanceUpdate", account, amount: -parseFloat(amount), timestamp: new Date() });
-showToast("Expense Recorded!"); 
+  showToast("Expense Recorded!");
   document.getElementById("exp-amount").value = "";
   document.getElementById("exp-category").value = "Food";
   document.getElementById("expense-name").value = "";
@@ -72,12 +73,11 @@ window.addIncome = async () => {
     date,
     timestamp: new Date(),
   });
-  await addDoc(transCol, { type: "income added successfully", amount });
-showToast("Income Recorded!"); 
+  showToast("Income Recorded!");
   document.getElementById("inc-amount").value = "";
-document.getElementById("inc-source").value = "";
-document.getElementById("inc-date").value = "";
-document.getElementById("inc-account").value = "chk1";
+  document.getElementById("inc-source").value = "";
+  document.getElementById("inc-date").value = "";
+  document.getElementById("inc-account").value = "chk1";
 };
 
 // 3. Live Updates & Chart
@@ -120,8 +120,7 @@ window.payCreditCard = async () => {
     date: date,
     timestamp: new Date(),
   });
-  await addDoc(transCol, { type: "payment successful", amount});
-showToast("Payment Recorded!");
+  showToast("Payment Recorded!");
   document.getElementById("pay-amount").value = "";
   document.getElementById("pay-date").value = "";
   document.getElementById("pay-from-account").value = "chk1";
@@ -139,23 +138,31 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
   snapshot.forEach((doc) => {
     const data = doc.data();
 
+    if (data.type === "balanceUpdate" || !data.amount) return;
+
     // 2. RUN THE MATH FOR BALANCES
     if (data.type === "income") {
       balances[data.account] += data.amount;
     } else if (data.type === "expense") {
       balances[data.account] -= data.amount;
-
       // Pocket Change Round-Up Logic
-      const roundUp = data.amount % 1 === 0 ? 0 : (1 - (data.amount % 1));
-      if (roundUp > 0) {
-        balances[data.account] -= roundUp;
-        balances["chk3"] += roundUp; 
+      if (data.account == "chk1") {
+        // Avoid rounding for Pocket Change itself
+        const roundUp = data.amount % 1 === 0 ? 0 : 1 - (data.amount % 1);
+        if (roundUp > 0) {
+          balances[data.account] -= roundUp;
+          balances["chk3"] += roundUp;
+          console.log(
+            `Round-up of $${roundUp.toFixed(2)} added to Pocket Change!`,
+          );
+          console.log(`CC ${data.account}`);
+        }
       }
-
       // Update Chart data
       const transDate = new Date(data.date);
       if (transDate.getMonth() === new Date().getMonth()) {
-        chartData[data.category] = (chartData[data.category] || 0) + data.amount;
+        chartData[data.category] =
+          (chartData[data.category] || 0) + data.amount;
       }
     } else if (data.type === "payment") {
       balances[data.account] -= data.amount;
@@ -165,18 +172,20 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
     // 3. RENDER HISTORY (Your existing code)
     let displayLabel = data.category || data.source;
     if (data.type === "payment") {
-        displayLabel = data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
+      displayLabel =
+        data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
     }
 
-    const accountLabel = data.type === "payment" 
-        ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}` 
+    const accountLabel =
+      data.type === "payment"
+        ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}`
         : data.account.toUpperCase();
 
     const item = document.createElement("div");
     item.className = "history-item";
     const typeClass = data.type === "income" ? "income-text" : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
-
+    console.log("Rendering transaction:", { displayLabel, accountLabel, amount: data.amount });
     item.innerHTML = `
         <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
             <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
@@ -193,10 +202,14 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
   });
 
   // 4. UPDATE UI - Match these IDs to your index.html exactly
-  document.getElementById("chk1-bal").innerText = `$${balances.chk1.toFixed(2)}`;
-  document.getElementById("chk2-bal").innerText = `$${balances.chk2.toFixed(2)}`;
-  document.getElementById("savings-bal").innerText = `$${balances.sav.toFixed(2)}`;
-  document.getElementById("cc-bal").innerText = `$${Math.abs(balances.cc).toFixed(2)}`;
+  document.getElementById("chk1-bal").innerText =
+    `$${balances.chk1.toFixed(2)}`;
+  document.getElementById("chk2-bal").innerText =
+    `$${balances.chk2.toFixed(2)}`;
+  document.getElementById("savings-bal").innerText =
+    `$${balances.sav.toFixed(2)}`;
+  document.getElementById("cc-bal").innerText =
+    `$${Math.abs(balances.cc).toFixed(2)}`;
 
   // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
   const pcDisplay = document.getElementById("chk3-bal");
@@ -216,10 +229,12 @@ window.deleteTransaction = async (id) => {
 };
 
 window.showToast = (message) => {
-    const toast = document.getElementById("toast");
-    toast.innerText = message;
-    toast.className = "toast show";
-    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+  const toast = document.getElementById("toast");
+  toast.innerText = message;
+  toast.className = "toast show";
+  setTimeout(() => {
+    toast.className = toast.className.replace("show", "");
+  }, 3000);
 };
 
 // Add Transfer Logic
@@ -244,7 +259,7 @@ window.addTransfer = async () => {
   });
 
   showToast("Transfer Successful!");
-  
+
   // Clear the inputs
   document.getElementById("trans-amount").value = "";
   document.getElementById("trans-date").value = "";
