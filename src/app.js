@@ -132,6 +132,7 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
   let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0, pc: 0 };
   let chartData = {};
   const listElement = document.getElementById("transaction-list");
+  let totalExpenses = 0;
 
   if (listElement) listElement.innerHTML = "";
 
@@ -210,10 +211,12 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
     `$${balances.sav.toFixed(2)}`;
   document.getElementById("cc-bal").innerText =
     `$${Math.abs(balances.cc).toFixed(2)}`;
+  document.getElementById("total-bal").innerText =
+    `$${(Object.values(balances).reduce((a, b) => a + b, 0)).toFixed(2)}`;
 
   // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
-  const pcDisplay = document.getElementById("chk3-bal");
-  if (pcDisplay) pcDisplay.innerText = `$${balances.chk3.toFixed(2)}`;
+  const pcDisplay = document.getElementById("pc-bal");
+  if (pcDisplay) pcDisplay.innerText = `$${balances.pc.toFixed(2)}`;
 
   updateChart(chartData);
 });
