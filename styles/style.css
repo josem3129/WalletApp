@@ -23,6 +23,11 @@ body {
 }
 
 .credit { border-left-color: #cf6679; }
+.total { border-left-color: #3c03da; }
+.chk1 { border-left-color: #3c03da; }
+.chk2 { border-left-color: #3c03da; }
+.chk3 { border-left-color: #3c03da; }
+.balance-saving { border-left-color: #bb86fc; }
 
 input, select, button {
     width: 90%;

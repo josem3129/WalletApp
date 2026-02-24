@@ -35,7 +35,13 @@ window.addExpense = async () => {
   const account = document.getElementById("exp-account").value;
   const date = document.getElementById("exp-date").value;
 
-  console.log("Adding expense:", { amount, category, expenseName, account, date });
+  console.log("Adding expense:", {
+    amount,
+    category,
+    expenseName,
+    account,
+    date,
+  });
 
   if (!amount || !date) return alert("Fill everything!");
 
@@ -171,10 +177,24 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
     }
 
     // 3. RENDER HISTORY (Your existing code)
-    let displayLabel = data.category || data.source;
+    // 1. Skip the 'balanceUpdate' logs that cause the "undefined" rows
+    if (data.type === "balanceUpdate" || !data.amount) return;
+
+    // 2. Define the Account and Name strings
+    const accountRef = data.account ? data.account.toUpperCase() : "";
+    const nameRef = data.expenseName || data.category || data.source || "";
+
+    // 3. Create the display label based on transaction type
+    let displayLabel = "";
+
     if (data.type === "payment") {
-      displayLabel =
+      // For Transfers/CC Payments: Show the flow (e.g., CHK1 → CC)
+      const paymentType =
         data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
+      displayLabel = `${paymentType}: ${accountRef} → ${data.toAccount.toUpperCase()}`;
+    } else {
+      // For Expenses/Income: Show "ACCOUNT - NAME" (e.g., CHK1 - LEGO/Hobbies)
+      displayLabel = `${accountRef} - ${nameRef}`;
     }
 
     const accountLabel =
@@ -186,7 +206,11 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
     item.className = "history-item";
     const typeClass = data.type === "income" ? "income-text" : "expense-text";
     const symbol = data.type === "income" ? "+" : "-";
-    console.log("Rendering transaction:", { displayLabel, accountLabel, amount: data.amount });
+    console.log("Rendering transaction:", {
+      displayLabel,
+      accountLabel,
+      amount: data.amount,
+    });
     item.innerHTML = `
         <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
             <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
@@ -207,14 +231,15 @@ onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
     `$${balances.chk1.toFixed(2)}`;
   document.getElementById("chk2-bal").innerText =
     `$${balances.chk2.toFixed(2)}`;
-document.getElementById("chk3-bal").innerText =
+  document.getElementById("chk3-bal").innerText =
     `$${balances.chk3.toFixed(2)}`;
   document.getElementById("savings-bal").innerText =
     `$${balances.sav.toFixed(2)}`;
   document.getElementById("cc-bal").innerText =
     `$${Math.abs(balances.cc).toFixed(2)}`;
-  document.getElementById("total-bal").innerText =
-    `$${(Object.values(balances).reduce((a, b) => a + b, 0)).toFixed(2)}`;
+  document.getElementById("total-bal").innerText = `$${Object.values(balances)
+    .reduce((a, b) => a + b, 0)
+    .toFixed(2)}`;
 
   // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
   const pcDisplay = document.getElementById("pc-bal");

@@ -16,12 +16,12 @@
         </header>
 
         <section id="dashboard">
-            <div class="balance-card">Checking 100: <span id="chk1-bal">$0</span></div>
-            <div class="balance-card">Checking 101: <span id="chk2-bal">$0</span></div>
-            <div class="balance-card">Pocket Change: <span id="chk3-bal">$0</span></div>
-            <div class="balance-card">Savings: <span id="savings-bal">$0</span></div>
+            <div class="balance-card chk1">Checking 100: <span id="chk1-bal">$0</span></div>
+            <div class="balance-card chk2">Checking 101: <span id="chk2-bal">$0</span></div>
+            <div class="balance-card chk3">Pocket Change: <span id="chk3-bal">$0</span></div>
+            <div class="balance-card balance-saving">Savings: <span id="savings-bal">$0</span></div>
             <div class="balance-card credit">Credit Card: <span id="cc-bal">$0</span></div>
-            <div class="balance-card Total">Total: <span id="total-bal">$0</span></div>
+            <div class="balance-card total">Total: <span id="total-bal">$0</span></div>
         </section>
 
         <canvas id="expenseChart"></canvas>
@@ -38,6 +38,7 @@
                 <option value="Entertainment">Entertainment</option>
                 <option value="Eating">Eating Out</option>
                 <option value="Shopping">Shopping</option>
+                <option value="Tithing">Tithing</option>
             </select>
             <input type="text" id="expense-name" placeholder="Name">
             <select id="exp-account">
