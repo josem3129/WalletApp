@@ -11,6 +11,13 @@ import {
   doc,
 } from "firebase/firestore";
 import Chart from "chart.js/auto";
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  onAuthStateChanged,
+  signOut 
+} from "firebase/auth";
 
 // Your existing config using environment variables
 const firebaseConfig = {
@@ -26,7 +33,40 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const transCol = collection(db, "transactions");
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
+// Login Function
+window.login = () => {
+  signInWithPopup(auth, provider)
+    .then((result) => {
+      console.log("Logged in! Your UID is:", result.user.uid);
+      showToast("Welcome, " + result.user.displayName);
+    })
+    .catch((error) => console.error("Login failed:", error));
+};
+
+// Logout Function
+window.logout = () => {
+  signOut(auth).then(() => showToast("Logged Out"));
+};
+
+// Monitor Auth State
+onAuthStateChanged(auth, (user) => {
+  const loginBtn = document.getElementById("login-btn");
+  const appContent = document.getElementById("app-content"); // Wrap your dashboard in this ID
+
+  if (user) {
+    console.log("Current User UID:", user.uid);
+    if (loginBtn) loginBtn.innerText = "Logout";
+    if (loginBtn) loginBtn.onclick = window.logout;
+    if (appContent) appContent.style.display = "block";
+  } else {
+    if (loginBtn) loginBtn.innerText = "Login with Google";
+    if (loginBtn) loginBtn.onclick = window.login;
+    if (appContent) appContent.style.display = "none";
+  }
+});
 // 1. Add Expense
 window.addExpense = async () => {
   const amount = document.getElementById("exp-amount").value;
