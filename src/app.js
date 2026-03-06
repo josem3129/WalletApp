@@ -13,7 +13,8 @@ import {
 import Chart from "chart.js/auto";
 import { 
   getAuth, 
-  signInWithPopup, 
+  signInWithRedirect, // Changed from PopUp
+  getRedirectResult,  // Added this
   GoogleAuthProvider, 
   onAuthStateChanged,
   signOut 
