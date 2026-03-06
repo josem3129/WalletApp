@@ -38,13 +38,18 @@ const provider = new GoogleAuthProvider();
 
 // Login Function
 window.login = () => {
-  signInWithPopup(auth, provider)
-    .then((result) => {
-      console.log("Logged in! Your UID is:", result.user.uid);
-      showToast("Welcome, " + result.user.displayName);
-    })
-    .catch((error) => console.error("Login failed:", error));
+  signInWithRedirect(auth, provider);
 };
+
+// Add this to handle the result after the page redirects back
+getRedirectResult(auth)
+  .then((result) => {
+    if (result) {
+      console.log("Logged in via redirect! UID:", result.user.uid);
+      showToast("Welcome back, " + result.user.displayName);
+    }
+  })
+  .catch((error) => console.error("Redirect error:", error));
 
 // Logout Function
 window.logout = () => {
