@@ -11,13 +11,13 @@ import {
   doc,
 } from "firebase/firestore";
 import Chart from "chart.js/auto";
-import { 
-  getAuth, 
+import {
+  getAuth,
   signInWithRedirect, // Changed from PopUp
-  getRedirectResult,  // Added this
-  GoogleAuthProvider, 
+  getRedirectResult, // Added this
+  GoogleAuthProvider,
   onAuthStateChanged,
-  signOut 
+  signOut,
 } from "firebase/auth";
 
 // Your existing config using environment variables
@@ -54,23 +54,168 @@ getRedirectResult(auth)
 
 // Logout Function
 window.logout = () => {
-  signOut(auth).then(() => showToast("Logged Out"));
+  signOut(auth)
+    .then(() => {
+      showToast("Logged Out");
+      // Force a reload to clear all app state and the Firestore listener
+      window.location.reload(); 
+    })
+    .catch((error) => console.error("Logout failed:", error));
 };
 
 // Monitor Auth State
+let unsubscribe = null; // Variable to store the listener
+
 onAuthStateChanged(auth, (user) => {
   const loginBtn = document.getElementById("login-btn");
-  const appContent = document.getElementById("app-content"); // Wrap your dashboard in this ID
+  const appContent = document.getElementById("app-content");
 
   if (user) {
-    console.log("Current User UID:", user.uid);
+    console.log("Logged in as:", user.displayName, "UID:", user.uid);
     if (loginBtn) loginBtn.innerText = "Logout";
-    if (loginBtn) loginBtn.onclick = window.logout;
     if (appContent) appContent.style.display = "block";
+
+    // ONLY START LISTENING AFTER LOGIN
+    if (!unsubscribe) {
+      unsubscribe = onSnapshot(
+        query(transCol, orderBy("timestamp", "desc")),
+        (snapshot) => {
+          // 1. Initialize all accounts, including your new Pocket Change (pc)
+          let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0, pc: 0 };
+          let chartData = {};
+          const listElement = document.getElementById("transaction-list");
+          let totalExpenses = 0;
+
+          if (listElement) listElement.innerHTML = "";
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+
+            if (data.type === "balanceUpdate" || !data.amount) return;
+
+            // 2. RUN THE MATH FOR BALANCES
+            if (data.type === "income") {
+              balances[data.account] += data.amount;
+            } else if (data.type === "expense") {
+              balances[data.account] -= data.amount;
+              // Pocket Change Round-Up Logic
+              if (data.account == "chk1") {
+                // Avoid rounding for Pocket Change itself
+                const roundUp =
+                  data.amount % 1 === 0 ? 0 : 1 - (data.amount % 1);
+                if (roundUp > 0) {
+                  balances[data.account] -= roundUp;
+                  balances["chk3"] += roundUp;
+                  console.log(
+                    `Round-up of $${roundUp.toFixed(2)} added to Pocket Change!`,
+                  );
+                  console.log(`CC ${data.account}`);
+                }
+              }
+              // Update Chart data
+              const transDate = new Date(data.date);
+              if (transDate.getMonth() === new Date().getMonth()) {
+                chartData[data.category] =
+                  (chartData[data.category] || 0) + data.amount;
+              }
+            } else if (data.type === "payment") {
+              balances[data.account] -= data.amount;
+              balances[data.toAccount] += data.amount;
+            }
+
+            // 3. RENDER HISTORY (Your existing code)
+            // 1. Skip the 'balanceUpdate' logs that cause the "undefined" rows
+            if (data.type === "balanceUpdate" || !data.amount) return;
+
+            // 2. Define the Account and Name strings
+            const accountRef = data.account ? data.account.toUpperCase() : "";
+            const nameRef =
+              data.expenseName || data.category || data.source || "";
+
+            // 3. Create the display label based on transaction type
+            let displayLabel = "";
+
+            if (data.type === "payment") {
+              // For Transfers/CC Payments: Show the flow (e.g., CHK1 → CC)
+              const paymentType =
+                data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
+              displayLabel = `${paymentType}: ${accountRef} → ${data.toAccount.toUpperCase()}`;
+            } else {
+              // For Expenses/Income: Show "ACCOUNT - NAME" (e.g., CHK1 - LEGO/Hobbies)
+              displayLabel = `${accountRef} - ${nameRef}`;
+            }
+
+            const accountLabel =
+              data.type === "payment"
+                ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}`
+                : data.account.toUpperCase();
+
+            const item = document.createElement("div");
+            item.className = "history-item";
+            const typeClass =
+              data.type === "income" ? "income-text" : "expense-text";
+            const symbol = data.type === "income" ? "+" : "-";
+            console.log("Rendering transaction:", {
+              displayLabel,
+              accountLabel,
+              amount: data.amount,
+            });
+            item.innerHTML = `
+        <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
+            <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
+            <div style="min-width: 0; flex-grow: 1;">
+                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayLabel}</div>
+                <small style="color:gray; display: block;">${data.date} • ${accountLabel}</small>
+            </div>
+        </div>
+        <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
+            ${symbol}$${data.amount.toFixed(2)}
+        </span>`;
+
+            if (listElement) listElement.appendChild(item);
+          });
+
+          // 4. UPDATE UI - Match these IDs to your index.html exactly
+          document.getElementById("chk1-bal").innerText =
+            `$${balances.chk1.toFixed(2)}`;
+          document.getElementById("chk2-bal").innerText =
+            `$${balances.chk2.toFixed(2)}`;
+          document.getElementById("chk3-bal").innerText =
+            `$${balances.chk3.toFixed(2)}`;
+          document.getElementById("savings-bal").innerText =
+            `$${balances.sav.toFixed(2)}`;
+          document.getElementById("cc-bal").innerText =
+            `$${Math.abs(balances.cc).toFixed(2)}`;
+          document.getElementById("total-bal").innerText = `$${Object.values(
+            balances,
+          )
+            .reduce((a, b) => a + b, 0)
+            .toFixed(2)}`;
+
+          // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
+          const pcDisplay = document.getElementById("pc-bal");
+          if (pcDisplay) pcDisplay.innerText = `$${balances.pc.toFixed(2)}`;
+
+          updateChart(chartData);
+        },
+        (error) => {
+          console.error("Firestore Error:", error);
+        },
+      );
+    }
   } else {
-    if (loginBtn) loginBtn.innerText = "Login with Google";
-    if (loginBtn) loginBtn.onclick = window.login;
-    if (appContent) appContent.style.display = "none";
+    // If logged out, stop listening and hide content
+    if (loginBtn) {
+      loginBtn.innerText = "Login with Google";
+      loginBtn.onclick = window.login; // Ensure it points back to login
+    }
+    if (appContent) {
+      appContent.style.display = "none"; // Hide your finances in Nampa
+    }
+    
+    // Clear out any old data from the list so it doesn't stay visible
+    const listElement = document.getElementById("transaction-list");
+    if (listElement) listElement.innerHTML = "";
   }
 });
 // 1. Add Expense
@@ -178,121 +323,121 @@ window.payCreditCard = async () => {
   document.getElementById("pay-from-account").value = "chk1";
 };
 
-// 2. Update the onSnapshot listener to also render the list
-onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
-  // 1. Initialize all accounts, including your new Pocket Change (pc)
-  let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0, pc: 0 };
-  let chartData = {};
-  const listElement = document.getElementById("transaction-list");
-  let totalExpenses = 0;
+// // 2. Update the onSnapshot listener to also render the list
+// onSnapshot(query(transCol, orderBy("timestamp", "desc")), (snapshot) => {
+//   // 1. Initialize all accounts, including your new Pocket Change (pc)
+//   let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0, pc: 0 };
+//   let chartData = {};
+//   const listElement = document.getElementById("transaction-list");
+//   let totalExpenses = 0;
 
-  if (listElement) listElement.innerHTML = "";
+//   if (listElement) listElement.innerHTML = "";
 
-  snapshot.forEach((doc) => {
-    const data = doc.data();
+//   snapshot.forEach((doc) => {
+//     const data = doc.data();
 
-    if (data.type === "balanceUpdate" || !data.amount) return;
+//     if (data.type === "balanceUpdate" || !data.amount) return;
 
-    // 2. RUN THE MATH FOR BALANCES
-    if (data.type === "income") {
-      balances[data.account] += data.amount;
-    } else if (data.type === "expense") {
-      balances[data.account] -= data.amount;
-      // Pocket Change Round-Up Logic
-      if (data.account == "chk1") {
-        // Avoid rounding for Pocket Change itself
-        const roundUp = data.amount % 1 === 0 ? 0 : 1 - (data.amount % 1);
-        if (roundUp > 0) {
-          balances[data.account] -= roundUp;
-          balances["chk3"] += roundUp;
-          console.log(
-            `Round-up of $${roundUp.toFixed(2)} added to Pocket Change!`,
-          );
-          console.log(`CC ${data.account}`);
-        }
-      }
-      // Update Chart data
-      const transDate = new Date(data.date);
-      if (transDate.getMonth() === new Date().getMonth()) {
-        chartData[data.category] =
-          (chartData[data.category] || 0) + data.amount;
-      }
-    } else if (data.type === "payment") {
-      balances[data.account] -= data.amount;
-      balances[data.toAccount] += data.amount;
-    }
+//     // 2. RUN THE MATH FOR BALANCES
+//     if (data.type === "income") {
+//       balances[data.account] += data.amount;
+//     } else if (data.type === "expense") {
+//       balances[data.account] -= data.amount;
+//       // Pocket Change Round-Up Logic
+//       if (data.account == "chk1") {
+//         // Avoid rounding for Pocket Change itself
+//         const roundUp = data.amount % 1 === 0 ? 0 : 1 - (data.amount % 1);
+//         if (roundUp > 0) {
+//           balances[data.account] -= roundUp;
+//           balances["chk3"] += roundUp;
+//           console.log(
+//             `Round-up of $${roundUp.toFixed(2)} added to Pocket Change!`,
+//           );
+//           console.log(`CC ${data.account}`);
+//         }
+//       }
+//       // Update Chart data
+//       const transDate = new Date(data.date);
+//       if (transDate.getMonth() === new Date().getMonth()) {
+//         chartData[data.category] =
+//           (chartData[data.category] || 0) + data.amount;
+//       }
+//     } else if (data.type === "payment") {
+//       balances[data.account] -= data.amount;
+//       balances[data.toAccount] += data.amount;
+//     }
 
-    // 3. RENDER HISTORY (Your existing code)
-    // 1. Skip the 'balanceUpdate' logs that cause the "undefined" rows
-    if (data.type === "balanceUpdate" || !data.amount) return;
+//     // 3. RENDER HISTORY (Your existing code)
+//     // 1. Skip the 'balanceUpdate' logs that cause the "undefined" rows
+//     if (data.type === "balanceUpdate" || !data.amount) return;
 
-    // 2. Define the Account and Name strings
-    const accountRef = data.account ? data.account.toUpperCase() : "";
-    const nameRef = data.expenseName || data.category || data.source || "";
+//     // 2. Define the Account and Name strings
+//     const accountRef = data.account ? data.account.toUpperCase() : "";
+//     const nameRef = data.expenseName || data.category || data.source || "";
 
-    // 3. Create the display label based on transaction type
-    let displayLabel = "";
+//     // 3. Create the display label based on transaction type
+//     let displayLabel = "";
 
-    if (data.type === "payment") {
-      // For Transfers/CC Payments: Show the flow (e.g., CHK1 → CC)
-      const paymentType =
-        data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
-      displayLabel = `${paymentType}: ${accountRef} → ${data.toAccount.toUpperCase()}`;
-    } else {
-      // For Expenses/Income: Show "ACCOUNT - NAME" (e.g., CHK1 - LEGO/Hobbies)
-      displayLabel = `${accountRef} - ${nameRef}`;
-    }
+//     if (data.type === "payment") {
+//       // For Transfers/CC Payments: Show the flow (e.g., CHK1 → CC)
+//       const paymentType =
+//         data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
+//       displayLabel = `${paymentType}: ${accountRef} → ${data.toAccount.toUpperCase()}`;
+//     } else {
+//       // For Expenses/Income: Show "ACCOUNT - NAME" (e.g., CHK1 - LEGO/Hobbies)
+//       displayLabel = `${accountRef} - ${nameRef}`;
+//     }
 
-    const accountLabel =
-      data.type === "payment"
-        ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}`
-        : data.account.toUpperCase();
+//     const accountLabel =
+//       data.type === "payment"
+//         ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}`
+//         : data.account.toUpperCase();
 
-    const item = document.createElement("div");
-    item.className = "history-item";
-    const typeClass = data.type === "income" ? "income-text" : "expense-text";
-    const symbol = data.type === "income" ? "+" : "-";
-    console.log("Rendering transaction:", {
-      displayLabel,
-      accountLabel,
-      amount: data.amount,
-    });
-    item.innerHTML = `
-        <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
-            <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
-            <div style="min-width: 0; flex-grow: 1;">
-                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayLabel}</div>
-                <small style="color:gray; display: block;">${data.date} • ${accountLabel}</small>
-            </div>
-        </div>
-        <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
-            ${symbol}$${data.amount.toFixed(2)}
-        </span>`;
+//     const item = document.createElement("div");
+//     item.className = "history-item";
+//     const typeClass = data.type === "income" ? "income-text" : "expense-text";
+//     const symbol = data.type === "income" ? "+" : "-";
+//     console.log("Rendering transaction:", {
+//       displayLabel,
+//       accountLabel,
+//       amount: data.amount,
+//     });
+//     item.innerHTML = `
+//         <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
+//             <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
+//             <div style="min-width: 0; flex-grow: 1;">
+//                 <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayLabel}</div>
+//                 <small style="color:gray; display: block;">${data.date} • ${accountLabel}</small>
+//             </div>
+//         </div>
+//         <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
+//             ${symbol}$${data.amount.toFixed(2)}
+//         </span>`;
 
-    if (listElement) listElement.appendChild(item);
-  });
+//     if (listElement) listElement.appendChild(item);
+//   });
 
-  // 4. UPDATE UI - Match these IDs to your index.html exactly
-  document.getElementById("chk1-bal").innerText =
-    `$${balances.chk1.toFixed(2)}`;
-  document.getElementById("chk2-bal").innerText =
-    `$${balances.chk2.toFixed(2)}`;
-  document.getElementById("chk3-bal").innerText =
-    `$${balances.chk3.toFixed(2)}`;
-  document.getElementById("savings-bal").innerText =
-    `$${balances.sav.toFixed(2)}`;
-  document.getElementById("cc-bal").innerText =
-    `$${Math.abs(balances.cc).toFixed(2)}`;
-  document.getElementById("total-bal").innerText = `$${Object.values(balances)
-    .reduce((a, b) => a + b, 0)
-    .toFixed(2)}`;
+//   // 4. UPDATE UI - Match these IDs to your index.html exactly
+//   document.getElementById("chk1-bal").innerText =
+//     `$${balances.chk1.toFixed(2)}`;
+//   document.getElementById("chk2-bal").innerText =
+//     `$${balances.chk2.toFixed(2)}`;
+//   document.getElementById("chk3-bal").innerText =
+//     `$${balances.chk3.toFixed(2)}`;
+//   document.getElementById("savings-bal").innerText =
+//     `$${balances.sav.toFixed(2)}`;
+//   document.getElementById("cc-bal").innerText =
+//     `$${Math.abs(balances.cc).toFixed(2)}`;
+//   document.getElementById("total-bal").innerText = `$${Object.values(balances)
+//     .reduce((a, b) => a + b, 0)
+//     .toFixed(2)}`;
 
-  // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
-  const pcDisplay = document.getElementById("pc-bal");
-  if (pcDisplay) pcDisplay.innerText = `$${balances.pc.toFixed(2)}`;
+//   // Use 'pc-bal' for Pocket Change to avoid conflicts with chk3
+//   const pcDisplay = document.getElementById("pc-bal");
+//   if (pcDisplay) pcDisplay.innerText = `$${balances.pc.toFixed(2)}`;
 
-  updateChart(chartData);
-});
+//   updateChart(chartData);
+// });
 
 window.deleteTransaction = async (id) => {
   if (confirm("Are you sure you want to delete this transaction?")) {
