@@ -11,19 +11,18 @@ import {
   doc,
 } from "firebase/firestore";
 import Chart from "chart.js/auto";
-import {
-  getAuth,
-  signInWithRedirect, // Changed from PopUp
-  getRedirectResult, // Added this
-  GoogleAuthProvider,
+import { 
+  getAuth, 
+  signInWithPopup, // Switch back to Popup
+  GoogleAuthProvider, 
   onAuthStateChanged,
-  signOut,
+  signOut 
 } from "firebase/auth";
 
 // Your existing config using environment variables
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "wall-app-dcfb0.firebaseapp.com", // Hardcode this for testing
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_SENDER_ID,
@@ -39,18 +38,18 @@ const provider = new GoogleAuthProvider();
 
 // Login Function
 window.login = () => {
-  signInWithRedirect(auth, provider);
+  signInWithPopup(auth, provider)
+    .then((result) => {
+      console.log("Logged in! UID:", result.user.uid);
+      showToast("Welcome, " + result.user.displayName);
+    })
+    .catch((error) => {
+      console.error("Login failed:", error.code, error.message);
+      // If you see 'auth/popup-blocked', you need to allow popups in the browser
+      alert("Login Error: " + error.message);
+    });
 };
 
-// Add this to handle the result after the page redirects back
-getRedirectResult(auth)
-  .then((result) => {
-    if (result) {
-      console.log("Logged in via redirect! UID:", result.user.uid);
-      showToast("Welcome back, " + result.user.displayName);
-    }
-  })
-  .catch((error) => console.error("Redirect error:", error));
 
 // Logout Function
 window.logout = () => {
