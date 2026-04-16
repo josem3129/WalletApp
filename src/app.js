@@ -9,15 +9,29 @@ import {
   orderBy,
   deleteDoc,
   doc,
+  getDocs,
 } from "firebase/firestore";
 import Chart from "chart.js/auto";
-import { 
-  getAuth, 
+import {
+  getAuth,
   signInWithPopup, // Switch back to Popup
-  GoogleAuthProvider, 
+  GoogleAuthProvider,
   onAuthStateChanged,
-  signOut 
+  signOut,
 } from "firebase/auth";
+import Papa from "papaparse";
+//  Define your category mapping rules
+const categoryMap = {
+  LEGO: "Hobbies",
+  MATERNE: "Work",
+  "PAPA MURPHY'S": "Food",
+  AMAZON: "Shopping",
+  STAPLES: "Office Supplies",
+  GOOGLE: "Services",
+  JESUSCHRIST: "Donations",
+  STARBUCKS: "Food",
+  "CITI CARD": "Bills",
+};
 
 // Your existing config using environment variables
 const firebaseConfig = {
@@ -50,14 +64,13 @@ window.login = () => {
     });
 };
 
-
 // Logout Function
 window.logout = () => {
   signOut(auth)
     .then(() => {
       showToast("Logged Out");
       // Force a reload to clear all app state and the Firestore listener
-      window.location.reload(); 
+      window.location.reload();
     })
     .catch((error) => console.error("Logout failed:", error));
 };
@@ -77,17 +90,18 @@ onAuthStateChanged(auth, (user) => {
     // ONLY START LISTENING AFTER LOGIN
     if (!unsubscribe) {
       unsubscribe = onSnapshot(
-        query(transCol, orderBy("timestamp", "desc")),
+        query(transCol, orderBy("date", "desc")),
         (snapshot) => {
           // 1. Initialize all accounts, including your new Pocket Change (pc)
           let balances = { chk1: 0, chk2: 0, chk3: 0, sav: 0, cc: 0, pc: 0 };
           let chartData = {};
+          const transactions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          transactions.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
           const listElement = document.getElementById("transaction-list");
-          let totalExpenses = 0;
 
           if (listElement) listElement.innerHTML = "";
 
-          snapshot.forEach((doc) => {
+          transactions.forEach((doc) => {
             const data = doc.data();
 
             if (data.type === "balanceUpdate" || !data.amount) return;
@@ -211,7 +225,7 @@ onAuthStateChanged(auth, (user) => {
     if (appContent) {
       appContent.style.display = "none"; // Hide your finances in Nampa
     }
-    
+
     // Clear out any old data from the list so it doesn't stay visible
     const listElement = document.getElementById("transaction-list");
     if (listElement) listElement.innerHTML = "";
@@ -483,4 +497,159 @@ window.addTransfer = async () => {
   // Clear the inputs
   document.getElementById("trans-amount").value = "";
   document.getElementById("trans-date").value = "";
+};
+
+function getCategory(desc) {
+  const upperDesc = desc.toUpperCase();
+  for (const [keyword, category] of Object.entries(categoryMap)) {
+    if (upperDesc.includes(keyword)) return category;
+  }
+  return "General";
+}
+
+window.importCSV = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 2. DUPLICATE CHECKER: Fetch existing data first
+  const existingSnap = await getDocs(transCol);
+  const existingTrans = existingSnap.docs
+    .map((doc) => {
+      const d = doc.data();
+
+      // 1. Ensure d.amount is a valid number before calling .toFixed()
+      const amt =
+        typeof d.amount === "number" ? d.amount : parseFloat(d.amount);
+
+      // 2. Skip entries that don't have a valid number (like old logs)
+      if (isNaN(amt)) return null;
+
+      return `${d.date}|${amt.toFixed(2)}|${d.expenseName}`;
+    })
+    .filter((item) => item !== null); // 3. Remove the nulls from the list
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (results) => {
+      const data = results.data;
+      const headers = Object.keys(data[0]);
+
+      const isBank = headers.includes("Transaction Amount");
+      const isCC = headers.includes("Debit") && headers.includes("Credit");
+      let addedCount = 0;
+      let duplicateCount = 0;
+
+      for (const row of data) {
+        let transaction = null;
+        const desc = row["Description"] || "";
+
+        if (isBank) {
+          // --- BANK LOGIC (Checking 100) ---
+          const amount = parseFloat(
+            String(row["Transaction Amount"]).replace(/,/g, ""),
+          );
+          if (isNaN(amount)) continue;
+
+          if (desc.toUpperCase().includes("CITI CARD ONLINE")) {
+            transaction = {
+              type: "payment",
+              amount: Math.abs(amount),
+              expenseName: "Credit Card Payment",
+              category: "Bills",
+              account: "chk1",
+              toAccount: "cc",
+              date: row["Transaction Date"].replace(/\//g, "-"),
+              timestamp: new Date(),
+            };
+          } else {
+            transaction = {
+              type: amount < 0 ? "expense" : "income",
+              amount: Math.abs(amount),
+              expenseName: desc,
+              category: getCategory(desc),
+              account: "chk1",
+              date: row["Transaction Date"].replace(/\//g, "-"),
+              timestamp: new Date(),
+            };
+          }
+        } else if (isCC) {
+          // --- CREDIT CARD LOGIC ---
+          const debit = parseFloat(String(row["Debit"]).replace(/,/g, ""));
+          // Skip "PAYMENT THANK YOU" as it's handled by the Bank file
+          if (desc.toUpperCase().includes("PAYMENT THANK YOU")) continue;
+
+          if (!isNaN(debit)) {
+            const [m, d, y] = row["Date"].split("/");
+            transaction = {
+              type: "expense",
+              amount: debit,
+              expenseName: desc,
+              category: getCategory(desc),
+              account: "cc",
+              date: `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`,
+              timestamp: new Date(),
+            };
+          }
+        }
+
+        // 3. APPLY DUPLICATE CHECK
+        if (transaction) {
+          const fingerPrint = `${transaction.date}|${transaction.amount.toFixed(2)}|${transaction.expenseName}`;
+          if (existingTrans.includes(fingerPrint)) {
+            duplicateCount++;
+            continue; // Skip if it already exists in Firestore
+          }
+
+          await addDoc(transCol, transaction);
+          addedCount++;
+        }
+      }
+      showToast(
+        `Imported ${addedCount} items. Skipped ${duplicateCount} duplicates.`,
+      );
+    },
+  });
+};
+let pendingTransactions = []; // Holds items during review
+
+
+function renderReview() {
+  const container = document.getElementById("review-list");
+  container.innerHTML = "";
+
+  pendingTransactions.forEach((t, index) => {
+    const row = document.createElement("div");
+    row.style = `display: grid; grid-template-columns: 100px 1fr 100px 150px; gap: 10px; align-items: center; padding: 10px; border-bottom: 1px solid #333; ${t.isDuplicate ? "opacity: 0.5; background: #2c1a1a;" : ""}`;
+
+    row.innerHTML = `
+      <small>${t.date}</small>
+      <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.expenseName}</div>
+      <b style="${t.type === "income" ? "color:#03dac6" : "color:#cf6679"}">$${t.amount.toFixed(2)}</b>
+      <select onchange="pendingTransactions[${index}].category = this.value" style="background:#333; color:white; border:none; padding:5px; border-radius:4px;">
+        <option value="General" ${t.category === "General" ? "selected" : ""}>General</option>
+        <option value="Food" ${t.category === "Food" ? "selected" : ""}>Food</option>
+        <option value="Hobbies" ${t.category === "Hobbies" ? "selected" : ""}>Hobbies</option>
+        <option value="Work" ${t.category === "Work" ? "selected" : ""}>Work</option>
+        <option value="Bills" ${t.category === "Bills" ? "selected" : ""}>Bills</option>
+      </select>
+    `;
+    container.appendChild(row);
+  });
+
+  document.getElementById("review-modal").style.display = "block";
+}
+
+window.confirmImport = async () => {
+  const toSave = pendingTransactions.filter((t) => !t.isDuplicate);
+  for (const t of toSave) {
+    await addDoc(transCol, { ...t, timestamp: new Date() });
+  }
+  showToast(`Saved ${toSave.length} new transactions!`);
+  closeReview();
+};
+
+window.closeReview = () => {
+  document.getElementById("review-modal").style.display = "none";
+  document.getElementById("csv-file").value = "";
 };
