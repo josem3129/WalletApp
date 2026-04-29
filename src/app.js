@@ -101,88 +101,87 @@ onAuthStateChanged(auth, (user) => {
 
           if (listElement) listElement.innerHTML = "";
 
-          transactions.forEach((doc) => {
-            const data = doc.data();
+          transactions.forEach((trans) => {
 
-            if (data.type === "balanceUpdate" || !data.amount) return;
+            if (trans.type === "balanceUpdate" || !trans.amount) return;
 
             // 2. RUN THE MATH FOR BALANCES
-            if (data.type === "income") {
-              balances[data.account] += data.amount;
-            } else if (data.type === "expense") {
-              balances[data.account] -= data.amount;
+            if (trans.type === "income") {
+              balances[trans.account] += trans.amount;
+            } else if (trans.type === "expense") {
+              balances[trans.account] -= trans.amount;
               // Pocket Change Round-Up Logic
-              if (data.account == "chk1") {
+              if (trans.account == "chk1") {
                 // Avoid rounding for Pocket Change itself
                 const roundUp =
-                  data.amount % 1 === 0 ? 0 : 1 - (data.amount % 1);
+                  trans.amount % 1 === 0 ? 0 : 1 - (trans.amount % 1);
                 if (roundUp > 0) {
-                  balances[data.account] -= roundUp;
+                  balances[trans.account] -= roundUp;
                   balances["chk3"] += roundUp;
                   console.log(
                     `Round-up of $${roundUp.toFixed(2)} added to Pocket Change!`,
                   );
-                  console.log(`CC ${data.account}`);
+                  console.log(`CC ${trans.account}`);
                 }
               }
               // Update Chart data
-              const transDate = new Date(data.date);
+              const transDate = new Date(trans.date);
               if (transDate.getMonth() === new Date().getMonth()) {
-                chartData[data.category] =
-                  (chartData[data.category] || 0) + data.amount;
+                chartData[trans.category] =
+                  (chartData[trans.category] || 0) + trans.amount;
               }
-            } else if (data.type === "payment") {
-              balances[data.account] -= data.amount;
-              balances[data.toAccount] += data.amount;
+            } else if (trans.type === "payment") {
+              balances[trans.account] -= trans.amount;
+              balances[trans.toAccount] += trans.amount;
             }
 
             // 3. RENDER HISTORY (Your existing code)
             // 1. Skip the 'balanceUpdate' logs that cause the "undefined" rows
-            if (data.type === "balanceUpdate" || !data.amount) return;
+            if (trans.type === "balanceUpdate" || !trans.amount) return;
 
             // 2. Define the Account and Name strings
-            const accountRef = data.account ? data.account.toUpperCase() : "";
+            const accountRef = trans.account ? trans.account.toUpperCase() : "";
             const nameRef =
-              data.expenseName || data.category || data.source || "";
+              trans.expenseName || trans.category || trans.source || "";
 
             // 3. Create the display label based on transaction type
             let displayLabel = "";
 
-            if (data.type === "payment") {
+            if (trans.type === "payment") {
               // For Transfers/CC Payments: Show the flow (e.g., CHK1 → CC)
               const paymentType =
-                data.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
-              displayLabel = `${paymentType}: ${accountRef} → ${data.toAccount.toUpperCase()}`;
+                trans.toAccount === "cc" ? "Credit Card Payment" : "Transfer";
+              displayLabel = `${paymentType}: ${accountRef} → ${trans.toAccount.toUpperCase()}`;
             } else {
               // For Expenses/Income: Show "ACCOUNT - NAME" (e.g., CHK1 - LEGO/Hobbies)
               displayLabel = `${accountRef} - ${nameRef}`;
             }
 
             const accountLabel =
-              data.type === "payment"
-                ? `${data.account.toUpperCase()} → ${data.toAccount.toUpperCase()}`
-                : data.account.toUpperCase();
+              trans.type === "payment"
+                ? `${trans.account.toUpperCase()} → ${trans.toAccount.toUpperCase()}`
+                : trans.account.toUpperCase();
 
             const item = document.createElement("div");
             item.className = "history-item";
             const typeClass =
-              data.type === "income" ? "income-text" : "expense-text";
-            const symbol = data.type === "income" ? "+" : "-";
+              trans.type === "income" ? "income-text" : "expense-text";
+            const symbol = trans.type === "income" ? "+" : "-";
             console.log("Rendering transaction:", {
               displayLabel,
               accountLabel,
-              amount: data.amount,
+              amount: trans.amount,
             });
             item.innerHTML = `
         <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
             <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
             <div style="min-width: 0; flex-grow: 1;">
                 <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayLabel}</div>
-                <small style="color:gray; display: block;">${data.date} • ${accountLabel}</small>
+                <small style="color:gray; display: block;">${trans.date} • ${accountLabel}</small>
             </div>
         </div>
         <span class="amount ${typeClass}" style="width: 15%; text-align: right; flex-shrink: 0; font-weight: bold;">
-            ${symbol}$${data.amount.toFixed(2)}
+            ${symbol}$${trans.amount.toFixed(2)}
         </span>`;
 
             if (listElement) listElement.appendChild(item);
