@@ -174,7 +174,7 @@ onAuthStateChanged(auth, (user) => {
             });
             item.innerHTML = `
         <div style="display: flex; align-items: center; width: 80%; gap: 10px; min-width: 0;">
-            <button onclick="deleteTransaction('${doc.id}')" class="delete-btn" style="flex-shrink: 0;">×</button>
+            <button onclick="deleteTransaction('${trans.id}')" class="delete-btn" style="flex-shrink: 0;">X</button>
             <div style="min-width: 0; flex-grow: 1;">
                 <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayLabel}</div>
                 <small style="color:gray; display: block;">${trans.date} • ${accountLabel}</small>
